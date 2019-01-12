@@ -1,0 +1,19 @@
+  ____   _____ __  __ ___  _____   ____  
+ / __ \ / ____|  \/  |__ \|  __ \ / __ \ 
+| |  | | (___ | \  / |  ) | |__) | |  | |
+| |  | |\___ \| |\/| | / /|  ___/| |  | |
+| |__| |____) | |  | |/ /_| |    | |__| |
+ \____/|_____/|_|  |_|____|_|     \____/   v.5.2.43  
+
+OpenStreetMap-Data to Topology Converter.
+with integrated RoutingEngine.
+Author(c) 2017   : Carsten Moeller - Pinneberg, Germany 
+Email            : info@osm2po.de
+Licence          : This software is FreeWare without nuisance.
+                   You are free to make copies, give exact copies
+                   of the original to anyone, distribute it in its
+                   unmodified form via electronic means.
+                   You may not reverse engineer, de-compile or
+                   disassemble it, rent, lease, lend or sell it.
+                   This software is provided 'AS IS', without
+                   warranty of any kind, so use it at your own risk.
