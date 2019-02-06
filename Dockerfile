@@ -22,7 +22,7 @@ RUN ["java", \
 FROM openjdk:11-jre-slim
 WORKDIR /usr/src/osm2po
 COPY --from=1 /usr/src/osm2po .
-EXPOSE 8888
+EXPOSE 8080
 CMD ["java", \
     "-Xmx6g", \
     "-jar", \
