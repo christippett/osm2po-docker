@@ -16,7 +16,6 @@ RUN ["java", \
     "prefix=nz", \
     "tileSize=x", \
     "cmd=tjspg", \
-    "postp.0.class=de.cm.osm2po.plugins.postp.PgRoutingWriter", \
     "/data/new-zealand-latest.osm.pbf"]
 
 FROM openjdk:11-jre-slim
