@@ -39,13 +39,6 @@ class FieldType:
 
 
 class TableSchema:
-    _SQL_TABLE_TYPE_MAPPING = {
-        "integer": FieldType(int, "int"),
-        "bigint": FieldType(int, "long"),
-        "character varying": FieldType(str, "string"),
-        "double precision": FieldType(float, "double"),
-    }
-
     def __init__(self, name=None, fields=None):
         self.name = None
         if fields:
@@ -70,52 +63,18 @@ class TableSchema:
         }
         return fastavro.parse_schema(schema)
 
-    def add_field(self, name, field_type):
-        self._fields[name] = field_type
-
-    def add_geometry_column_from_ddl(self, ddl):
-        ddl_match = re.search(
-            (
-                r"^SELECT AddGeometryColumn\("
-                r"'(?P<table_name>.+?)'"
-                r", '(?P<column_name>.+?)'"
-                r", (?P<srid>\d+?)"
-                r", '(?P<type>.+?)'"
-                r", (?P<dimension>\d+?)"
-                r"\);$"
-            ),
-            ddl,
-            re.IGNORECASE,
-        )
-        if ddl_match:
-            column_name = ddl_match.group("column_name")
-            self.add_field(
-                name=column_name,
-                field_type=FieldType(convert_wkb_to_wkt(strip_srid=True), "string"),
-            )
-
-    def add_fields_from_create_table_ddl(self, ddl):
-        ddl_match = re.search(
-            r"^CREATE TABLE (?P<table_name>.+?)\((?P<fields>.+?)\)[;,]?$", ddl
-        )
-        if ddl_match:
-            name = ddl_match.group("table_name")
-            text_fields = ddl_match.group("fields")
-            fields = OrderedDict(
-                map(self._parse_create_table_field, text_fields.split(","))
-            )
-            self.name = name
-            self._fields.update(fields)
-
-    def _parse_create_table_field(self, field):
-        field_name, _, sql_type = field.strip().partition(" ")
-        return (
-            field_name,
-            self._SQL_TABLE_TYPE_MAPPING.get(sql_type, FieldType(str, "string")),
-        )
+    def add_fields(self, fields):
+        self._fields.update(fields)
 
 
 class DDLConverter:
+    _SQL_TABLE_TYPE_MAPPING = {
+        "integer": FieldType(int, "int"),
+        "bigint": FieldType(int, "long"),
+        "character varying": FieldType(str, "string"),
+        "double precision": FieldType(float, "double"),
+    }
+
     def __init__(self, input_file, output_file, output_format):
         self.input_file = input_file
         self.output_file = output_file
@@ -136,9 +95,11 @@ class DDLConverter:
         with open(self.input_file, "r") as in_fp:
             for line in in_fp:
                 if line.lower().startswith("create table"):
-                    table_schema.add_fields_from_create_table_ddl(line)
+                    fields = self._get_fields_from_create_table_ddl(line)
+                    table_schema.add_fields(fields)
                 if line.lower().startswith("select addgeometrycolumn"):
-                    table_schema.add_geometry_column_from_ddl(line)
+                    field = self._get_geometry_field_from_ddl(line)
+                    table_schema.add_fields(field)
                 insert_line = re.search(r"^\((?P<values>.+?)\)[;,]?$", line)
                 if insert_line:
                     values = insert_line.group("values")
@@ -170,6 +131,44 @@ class DDLConverter:
         with open(output_file, "wb") as out_fp:
             schema = table_schema.get_avro_schema()
             fastavro.writer(out_fp, schema, records)
+
+    def _get_geometry_field_from_ddl(self, ddl):
+        ddl_match = re.search(
+            (
+                r"^SELECT AddGeometryColumn\("
+                r"'(?P<table_name>.+?)'"
+                r", '(?P<column_name>.+?)'"
+                r", (?P<srid>\d+?)"
+                r", '(?P<type>.+?)'"
+                r", (?P<dimension>\d+?)"
+                r"\);$"
+            ),
+            ddl,
+            re.IGNORECASE,
+        )
+        if ddl_match:
+            field_name = ddl_match.group("column_name")
+            return {
+                field_name: FieldType(convert_wkb_to_wkt(strip_srid=True), "string")
+            }
+
+    def _get_fields_from_create_table_ddl(self, ddl):
+        ddl_match = re.search(
+            r"^CREATE TABLE (?P<table_name>.+?)\((?P<fields>.+?)\)[;,]?$", ddl
+        )
+        if ddl_match:
+            text_fields = ddl_match.group("fields")
+            fields = OrderedDict(
+                map(self._parse_create_table_field, text_fields.split(","))
+            )
+            return fields
+
+    def _parse_create_table_field(self, field):
+        field_name, _, sql_type = field.strip().partition(" ")
+        return (
+            field_name,
+            self._SQL_TABLE_TYPE_MAPPING.get(sql_type, FieldType(str, "string")),
+        )
 
 
 if __name__ == "__main__":
