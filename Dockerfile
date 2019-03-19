@@ -18,9 +18,14 @@ RUN ["java", \
     "cmd=tjspg", \
     "/data/new-zealand-latest.osm.pbf"]
 
+FROM gcr.io/cloud-builders/gsutil
+WORKDIR /tmp/4pgr
+RUN gsutil cp -r gs://landmarksid-ifra/4pgr/* .
+
 FROM openjdk:11-jre-slim
 WORKDIR /usr/src/osm2po
-COPY --from=1 /usr/src/osm2po .
+# COPY --from=1 /usr/src/osm2po .
+COPY --from=3 /usr/src/osm2po .
 EXPOSE 8080
 CMD ["java", \
     "-Xmx6g", \
